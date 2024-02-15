@@ -32,6 +32,8 @@ spec:
       labels:
         app: postgres
     spec:
+      securityContext:
+        fsGroup: 1001
       containers:
         - name: postgres
           image: postgres:16.2
@@ -45,3 +47,40 @@ spec:
             value: postgres
           - name: POSTGRES_PASSWORD
             value: postgres
+          volumeMounts:
+            - mountPath: "/var/lib/postgresql/data"
+              name: postgres
+      volumes:
+        - name: postgres
+          persistentVolumeClaim:
+            claimName: postgres
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres
+  namespace: tests
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/tmp/postgres"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres
+  namespace: tests
+spec:
+  storageClassName: manual
+  volumeName: postgres
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

@@ -34,6 +34,20 @@ spec:
       labels:
         app: keycloak
     spec:
+      initContainers:
+      - name: test-postgres-connection
+        image: postgres:16.2
+        command: ['/bin/bash', '-c', ". /scripts/test-connection.sh"]
+        volumeMounts:
+        - name: test-postgres-connection
+          mountPath: "/scripts"
+      - name: test-infinispan-connection
+        image: curlimages/curl:8.6.0
+        command: ['sh', '-c', ". /scripts/test-connection.sh"]
+        volumeMounts:
+        - name: test-infinispan-connection
+          mountPath: "/scripts"
+
       containers:
         - name: keycloak
           image: keycloak/keycloak:23.0.6-0
@@ -51,9 +65,22 @@ spec:
             - --hostname-strict=false
             - --proxy=edge
             - --http-enabled=true
+            - --health-enabled=true
           ports:
             - name: keycloak
               containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            failureThreshold: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            failureThreshold: 10
+            periodSeconds: 10
           env:
             - name: KEYCLOAK_ADMIN
               value: keycloak
@@ -71,7 +98,67 @@ spec:
             items:
               - key: infinispan-cache.xml
                 path: infinispan-cache.xml
+        - name: test-postgres-connection
+          configMap:
+            name: test-postgres-connection
+        - name: test-infinispan-connection
+          configMap:
+            name: test-infinispan-connection
 
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-infinispan-connection
+  namespace: tests
+data:
+  test-connection.sh: |
+    #!/bin/bash
+    url="http://infinispan:11222/rest/v2/cache-managers/remoteKeycloak/health/status"
+    max_attempts=10
+    attempt=1
+    while true; do
+        response=$(curl -s -o /dev/null -2 -w "%{http_code}" $url)
+        if [ "$response" = "200" ]; then
+            echo "Cache ready"
+            exit 0
+        else
+            echo "Attempt $attempt - $response"
+            if [ $attempt -eq $max_attempts ]; then
+                echo "Maximum number of attempts reached"
+                exit 1
+            fi
+            attempt=$((attempt+1))
+            sleep 6
+        fi
+    done
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-postgres-connection
+  namespace: tests
+data:
+  test-connection.sh: |
+    #!/bin/bash
+    max_attempts=10
+    attempt=1
+    while true; do
+        pg_isready -d keycloak -h postgres -p 5432 -U keycloak
+        response=$(echo $?)
+        if [ "$response" = "0" ]; then
+            echo "Database ready"
+            exit 0
+        else
+            echo "Attempt $attempt - $response"
+            if [ $attempt -eq $max_attempts ]; then
+                echo "Maximum number of attempts reached"
+                exit 1
+            fi
+            ((attempt++))
+            sleep 6
+        fi
+    done
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -104,7 +191,7 @@ data:
                         <remote-server host="infinispan" port="11222" />
                         <security>
                             <authentication server-name="infinispan">
-                                <digest username="infinispan" password="infinispan" realm="default" />
+                                <digest username="keycloak" password="keycloak" realm="default" />
                             </authentication>
                         </security>
                     </remote-store>

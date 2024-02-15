@@ -32,14 +32,32 @@ spec:
       labels:
         app: infinispan
     spec:
+      securityContext:
+        fsGroup: 1001
       containers:
         - name: infinispan
           image: infinispan/server:14.0
           args: 
             - --server-config=/infinispan/infinispan-cache.xml
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", ". /scripts/create-user.sh"]
           ports:
           - name: infinispan
             containerPort: 11222
+          readinessProbe:
+            httpGet:
+              path: /rest/v2/cache-managers/remoteKeycloak/health/status
+              port: 11222
+            failureThreshold: 5
+            periodSeconds: 30
+          livenessProbe:
+            httpGet:
+              path: /rest/v2/cache-managers/remoteKeycloak/health/status
+              port: 11222
+            failureThreshold: 10
+            periodSeconds: 30
           env:
           - name: USER
             value: infinispan
@@ -50,6 +68,10 @@ spec:
               subPath: infinispan-cache.xml
               name: infinispan-cache
               readOnly: true
+            - mountPath: "/opt/infinispan/server/data"
+              name: infinispan
+            - mountPath: "/scripts"
+              name: create-user
       volumes:
         - name: infinispan-cache
           configMap:
@@ -57,6 +79,74 @@ spec:
             items:
               - key: infinispan-cache.xml
                 path: infinispan-cache.xml
+        - name: create-user
+          configMap:
+            name: create-user
+        - name: infinispan
+          persistentVolumeClaim:
+            claimName: infinispan
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: infinispan
+  namespace: tests
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/tmp/infinispan"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: infinispan
+  namespace: tests
+spec:
+  storageClassName: manual
+  volumeName: infinispan
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: create-user
+  namespace: tests
+data:
+  create-user.sh: |
+    #!/bin/bash
+    url="http://localhost:11222/rest/v2/cache-managers/remoteKeycloak/health/status"
+    max_attempts=10
+    attempt=1
+    while true; do
+        response=$(curl -s -o /dev/null -2 -w "%{http_code}" $url)
+        if [ "$response" = "200" ]; then
+            echo "200"
+            echo "creating user..."
+            bin/cli.sh user create keycloak -p keycloak -g application
+            echo "done"
+            cat server/conf/users.properties
+            cat server/conf/groups.properties
+            exit 0
+        else
+            echo "Attempt $attempt - $response"
+            if [ $attempt -eq $max_attempts ]; then
+                echo "Maximum number of atteempts reached"
+                exit 1
+            fi
+            attempt=$((attempt+1))
+            sleep 6
+        fi
+    done
 ---
 apiVersion: v1
 kind: ConfigMap
