@@ -34,6 +34,8 @@ spec:
       labels:
         app: keycloak
     spec:
+      securityContext:
+        fsGroup: 1001
       initContainers:
       - name: test-postgres-connection
         image: postgres:16.2
@@ -47,6 +49,14 @@ spec:
         volumeMounts:
         - name: test-infinispan-connection
           mountPath: "/scripts"
+      - name: setup-provider
+        securityContext:
+          runAsUser: 0
+        image: curlimages/curl:8.6.0
+        command: ['sh', '-c', "curl -Lo /keycloak/keycloak-metrics-spi.jar https://github.com/aerogear/keycloak-metrics-spi/releases/download/5.0.0/keycloak-metrics-spi-5.0.0.jar; ls -la"]
+        volumeMounts:
+          - name: keycloak
+            mountPath: "/keycloak"
 
       containers:
         - name: keycloak
@@ -87,6 +97,8 @@ spec:
             - name: KEYCLOAK_ADMIN_PASSWORD
               value: keycloak
           volumeMounts:
+            - name: keycloak
+              mountPath: /opt/keycloak/providers
             - mountPath: /opt/keycloak/conf/infinispan-cache.xml
               subPath: infinispan-cache.xml
               name: keycloak-cache
@@ -104,7 +116,39 @@ spec:
         - name: test-infinispan-connection
           configMap:
             name: test-infinispan-connection
+        - name: keycloak
+          persistentVolumeClaim:
+            claimName: keycloak
 
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: keycloak
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/tmp/keycloak"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: keycloak
+  namespace: tests
+spec:
+  storageClassName: manual
+  volumeName: keycloak
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
 ---
 apiVersion: v1
 kind: ConfigMap
