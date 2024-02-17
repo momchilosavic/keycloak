@@ -6,8 +6,8 @@ Cluster: EKS - Kubernetes v1.26 <br />
 Tools needed: helm <br />
 Command: helm upgrade --install ./chart keycloak --namespace <namespace> --create-namespace --debug --set <key in chart/values.yaml>=<value> <br />
 All values are predefined in values.yaml but they can be overwriten with appropriate values when running helm upgrade <br />
-For sake of simplicity, credentials and sensitive data are defined in values.yaml
-Also, for sake of simplicty, hostPath is used for persistent storage.
+For sake of simplicity, credentials and sensitive data are defined in values.yaml </br >
+Also, for sake of simplicty, hostPath is used for persistent storage. </br >
 ## Solutions
 ### Deploy Keycloak and a separate Infinispan to a local Kubernetes cluster 
 #### Documentation
