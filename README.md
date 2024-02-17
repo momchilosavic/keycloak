@@ -46,7 +46,8 @@ Connect to Infinispan container and check if user is created:<br />
 Based on log4j2.xml file, log level is updated to DEBUG. File is provided to container using ConfigMap "infinispan-logs".
 #### Test
 List logs from Infinispan container<br />
-![image](https://github.com/momchilosavic/keycloak/assets/48445874/b1559326-0977-4d97-a2c3-d710706df6d5)
+![image](https://github.com/momchilosavic/keycloak/assets/48445874/3f1925a0-be28-462d-8909-e8b192775ab3)
+
 ### Add a custom provider https://github.com/aerogear/keycloak-metrics-spi and deploy it to the Keycloak server
 #### Documentation
 [aerogear/keycloak-metrics-spi: Adds a Metrics Endpoint to Keycloak (github.com)](https://github.com/aerogear/keycloak-metrics-spi?tab=readme-ov-file#on-keycloak-quarkus-distribution)<br />
