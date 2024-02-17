@@ -2,9 +2,9 @@
 ### Diagram
 ![image](https://github.com/momchilosavic/keycloak/assets/48445874/5cdb3482-7c01-48cd-82a7-b8d9f493a619)
 ### How to deploy?
-Tools needed: helm
-Command: helm upgrade --install ./chart keycloak --namespace <namespace> --create-namespace --debug
-Cluster: EKS - Kubernetes v1.26
+##### Tools needed: helm
+##### Command: helm upgrade --install ./chart keycloak --namespace <namespace> --create-namespace --debug
+##### Cluster: EKS - Kubernetes v1.26
 ## Solutions
 ### Deploy Keycloak and a separate Infinispan to a local Kubernetes cluster 
 #### Documentation
