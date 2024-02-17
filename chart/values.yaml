@@ -1,0 +1,73 @@
+postgres:
+  storage:
+    hostPath: "/tmp/postgres"
+    capacity: 1Gi
+  deployment:
+    image: postgres:15.0
+    env:
+      - name: POSTGRES_DB
+        value: postgres
+      - name: POSTGRES_USER
+        value: postgres
+      - name: POSTGRES_PASSWORD
+        value: postgres
+    port: 5432
+    
+infinispan:
+  deployment:
+    image: infinispan/server:14.0
+    env:
+      - name: USER
+        value: infinispan
+      - name: PASS
+        value: infinispan
+    port: 11222
+  storage:
+    hostPath: "/tmp/infinispan"
+    capacity: 1Gi
+  configMap:
+    cacheConfig:
+      cacheManager: remoteKeycloak
+    createUser: 
+      name: keycloak
+      password: keycloak
+      group: application
+    logConfig:
+      level: DEBUG
+      
+keycloak:
+  deployment:
+    image: keycloak/keycloak:23.0.6-0
+    env:
+      - name: KEYCLOAK_ADMIN
+        value: keycloak
+      - name: KEYCLOAK_ADMIN_PASSWORD
+        value: keycloak
+    port: 8080
+    initContainer:
+      image:
+        curl: curlimages/curl:8.6.0
+        postgres: postgres:15.0
+      providerUrl: https://github.com/aerogear/keycloak-metrics-spi/releases/download/5.0.0/keycloak-metrics-spi-5.0.0.jar   
+    args:
+      database: postgres
+      databaseUsername: postgres
+      databasePassword: postgres
+      databaseHost: postgres.tests.svc.cluster.local
+      databasePort: 5432
+      databaseEngine: postgres
+      hostname: a388895f6c92c48829d5174b2e67789e-f21a17167740f882.elb.eu-west-1.amazonaws.com
+  storage:
+    hostPath: "/tmp/keycloak"
+    capacity: 1Gi
+  configMap:
+    testConnection:
+      infinispanUrl: http://infinispan:11222/rest/v2/cache-managers/remoteKeycloak/health/status
+    cacheConfig:
+      name: sessions
+      serverName: infinispan
+      username: keycloak
+      password: keycloak
+      realm: default
+    
+  

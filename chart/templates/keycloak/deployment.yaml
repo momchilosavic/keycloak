@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      securityContext:
+        fsGroup: 1001
+      initContainers:
+      - name: test-postgres-connection
+        image: {{ .Values.keycloak.deployment.initContainer.image.postgres }}
+        command: ['/bin/bash', '-c', ". /scripts/test-connection.sh"]
+        volumeMounts:
+        - name: test-postgres-connection
+          mountPath: "/scripts"
+      - name: test-infinispan-connection
+        image: {{ .Values.keycloak.deployment.initContainer.image.curl }}
+        command: ['sh', '-c', ". /scripts/test-connection.sh"]
+        volumeMounts:
+        - name: test-infinispan-connection
+          mountPath: "/scripts"
+      - name: setup-provider
+        securityContext:
+          runAsUser: 0
+        image: {{ .Values.keycloak.deployment.initContainer.image.curl }}
+        command: ['sh', '-c', "curl -Lo /keycloak/keycloak-metrics-spi.jar {{ .Values.keycloak.deployment.initContainer.providerUrl }}; ls -la"]
+        volumeMounts:
+          - name: keycloak
+            mountPath: "/keycloak"
+
+      containers:
+        - name: keycloak
+          image: {{ .Values.keycloak.deployment.image }}
+          args:
+            - start-dev
+            - --db={{ .Values.keycloak.deployment.args.databaseEngine }}
+            - --db-username={{ .Values.keycloak.deployment.args.databaseUsername }}
+            - --db-password={{ .Values.keycloak.deployment.args.databasePassword }}
+            - --db-url-host={{ .Values.keycloak.deployment.args.databaseHost }}
+            - --db-url-port={{ .Values.keycloak.deployment.args.databasePort }}
+            - --db-url-database={{ .Values.keycloak.deployment.args.database }}
+            - --cache=ispn
+            - --cache-config-file=infinispan-cache.xml
+            - --hostname={{ .Values.keycloak.deployment.args.hostname }}
+            - --hostname-strict=false
+            - --proxy=edge
+            - --http-enabled=true
+            - --health-enabled=true
+          ports:
+            - name: keycloak
+              containerPort: {{ .Values.keycloak.deployment.port }}
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: {{ .Values.keycloak.deployment.port }}
+            failureThreshold: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: {{ .Values.keycloak.deployment.port }}
+            failureThreshold: 10
+            periodSeconds: 10
+          env:
+          {{- toYaml .Values.keycloak.deployment.env |  nindent 10 }}
+          volumeMounts:
+            - name: keycloak
+              mountPath: /opt/keycloak/providers
+            - mountPath: /opt/keycloak/conf/infinispan-cache.xml
+              subPath: infinispan-cache.xml
+              name: keycloak-cache
+              readOnly: true
+      volumes:
+        - name: keycloak-cache
+          configMap:
+            name: keycloak-cache
+            items:
+              - key: infinispan-cache.xml
+                path: infinispan-cache.xml
+        - name: test-postgres-connection
+          configMap:
+            name: test-postgres-connection
+        - name: test-infinispan-connection
+          configMap:
+            name: test-infinispan-connection
+        - name: keycloak
+          persistentVolumeClaim:
+            claimName: keycloak

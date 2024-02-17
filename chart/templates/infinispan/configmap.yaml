@@ -1,0 +1,214 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: create-user
+  namespace: {{ .Release.Namespace }}
+data:
+  create-user.sh: |
+    #!/bin/bash
+    url="http://localhost:{{ .Values.infinispan.deployment.port }}/rest/v2/cache-managers/{{ .Values.infinispan.configMap.cacheConfig.cacheManager }}/health/status"
+    max_attempts=10
+    attempt=1
+    while true; do
+        response=$(curl -s -o /dev/null -2 -w "%{http_code}" $url)
+        if [ "$response" = "200" ]; then
+            echo "200"
+            echo "creating user..."
+            bin/cli.sh user create {{ .Values.infinispan.configMap.createUser.name }} -p {{ .Values.infinispan.configMap.createUser.password }} -g {{ .Values.infinispan.configMap.createUser.group }}
+            echo "done"
+            cat server/conf/users.properties
+            cat server/conf/groups.properties
+            exit 0
+        else
+            echo "Attempt $attempt - $response"
+            if [ $attempt -eq $max_attempts ]; then
+                echo "Maximum number of atteempts reached"
+                exit 1
+            fi
+            attempt=$((attempt+1))
+            sleep 6
+        fi
+    done
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infinispan-cache
+  namespace: {{ .Release.Namespace }}
+data:
+  infinispan-cache.xml: |
+    <?xml version="1.0" encoding="UTF-8"?>
+    <infinispan
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="urn:infinispan:config:14.0 https://infinispan.org/schemas/infinispan-config-14.0.xsd
+                                urn:infinispan:server:14.0 https://infinispan.org/schemas/infinispan-server-14.0.xsd"
+            xmlns="urn:infinispan:config:14.0"
+            xmlns:server="urn:infinispan:server:14.0">
+        
+        <cache-container name="{{ .Values.infinispan.configMap.cacheConfig.cacheManager }}" statistics="true">
+            <transport cluster="${infinispan.cluster.name:ISPN}"
+                stack="${infinispan.cluster.stack:udp}" node-name="${infinispan.node.name:mainNode}"
+                site="site1" />
+                
+            <security>
+                <authorization />
+            </security>
+            
+            <serialization marshaller="org.infinispan.jboss.marshalling.commons.GenericJBossMarshaller">
+                <allow-list>
+                    <class>org.*</class>
+                    <regex>.*</regex>
+                </allow-list>
+            </serialization>
+            
+            <distributed-cache name="sessions">
+                <encoding media-type="application/x-jboss-marshalling" />
+            </distributed-cache>
+        </cache-container>
+        
+        <server xmlns="urn:infinispan:server:14.0">
+            <interfaces>
+                <interface name="public">
+                    <inet-address value="${infinispan.bind.address:127.0.0.1}" />
+                </interface>
+            </interfaces>
+            
+            <socket-bindings default-interface="public"
+                port-offset="${infinispan.socket.binding.port-offset:0}">
+                <socket-binding name="default"
+                    port="${infinispan.bind.port:{{ .Values.infinispan.deployment.port }}}" />
+                <socket-binding name="memcached"
+                    port="11221" />
+            </socket-bindings>
+            
+            <security>
+                <credential-stores>
+                    <credential-store name="credentials" path="credentials.pfx">
+                        <clear-text-credential clear-text="secret" />
+                    </credential-store>
+                </credential-stores>
+                <security-realms>
+                    <security-realm name="default">
+                        <properties-realm groups-attribute="Roles">
+                            <user-properties path="users.properties" />
+                            <group-properties path="groups.properties" />
+                        </properties-realm>
+                    </security-realm>
+                </security-realms>
+            </security>
+            
+            <endpoints socket-binding="default" security-realm="default">
+                <endpoint>
+                    <hotrod-connector name="hotrod">
+                        <authentication>
+                            <sasl mechanisms="DIGEST-MD5"
+                                server-name="infinispan" />
+                        </authentication>
+                    </hotrod-connector>
+                    <rest-connector name="rest" />
+                </endpoint>
+            </endpoints>
+        </server>
+        
+    </infinispan>
+    
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infinispan-logs
+  namespace: {{ .Release.Namespace }}
+data:
+  log4j2.xml: |   
+    <?xml version="1.0" encoding="UTF-8"?>
+    <Configuration name="InfinispanServerConfig" monitorInterval="60" shutdownHook="disable">
+        <Properties>
+            <Property name="path">${sys:infinispan.server.log.path}</Property>
+            <Property name="accessLogPattern">%X{address} %X{user} [%d{dd/MMM/yyyy:HH:mm:ss Z}] &quot;%X{method} %m %X{protocol}&quot; %X{status} %X{requestSize} %X{responseSize} %X{duration}%n</Property>
+        </Properties>
+        <Appenders>
+            <!-- Colored output on the console -->
+            <Console name="STDOUT">
+                <PatternLayout pattern="%highlight{%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p (%t) [%c] %m%throwable}{INFO=normal, DEBUG=normal, TRACE=normal}%n"/>
+            </Console>
+            <!-- Rolling file -->
+            <RollingFile name="FILE" createOnDemand="true"
+                         fileName="${path}/server.log"
+                         filePattern="${path}/server.log.%d{yyyy-MM-dd}-%i">
+                <Policies>
+                    <OnStartupTriggeringPolicy />
+                    <SizeBasedTriggeringPolicy size="100 MB" />
+                    <TimeBasedTriggeringPolicy />
+                </Policies>
+                <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p (%t) [%c] %m%throwable%n"/>
+            </RollingFile>
+            <!-- Rolling file -->
+            <RollingFile name="AUDIT-FILE" createOnDemand="true"
+                     fileName="${path}/audit.log"
+                     filePattern="${path}/audit.log.%d{yyyy-MM-dd}-%i">
+                <Policies>
+                    <OnStartupTriggeringPolicy />
+                    <SizeBasedTriggeringPolicy size="100 MB" />
+                    <TimeBasedTriggeringPolicy />
+                </Policies>
+                <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss,SSS} %m%n"/>
+            </RollingFile>
+            <!-- Rolling JSON file, disabled by default -->
+            <RollingFile name="JSON-FILE" createOnDemand="true"
+                     fileName="${path}/server.log.json"
+                     filePattern="${path}/server.log.json.%d{yyyy-MM-dd}-%i">
+                <Policies>
+                    <OnStartupTriggeringPolicy />
+                    <SizeBasedTriggeringPolicy size="100 MB" />
+                    <TimeBasedTriggeringPolicy />
+                </Policies>
+                <JsonLayout compact="true" eventEol="true" stacktraceAsString="true">
+                    <KeyValuePair key="time" value="$${date:yyyy-MM-dd'T'HH:mm:ss.SSSZ}" />
+                </JsonLayout>
+            </RollingFile>
+            <!-- Rolling HotRod access log, disabled by default -->
+            <RollingFile name="HR-ACCESS-FILE" createOnDemand="true"
+                     fileName="${path}/hotrod-access.log"
+                     filePattern="${path}/hotrod-access.log.%i">
+                <Policies>
+                    <SizeBasedTriggeringPolicy size="100 MB" />
+                </Policies>
+                <PatternLayout pattern="${accessLogPattern}"/>
+            </RollingFile>
+            <!-- Rolling REST access log, disabled by default -->
+            <RollingFile name="REST-ACCESS-FILE" createOnDemand="true"
+                     fileName="${path}/rest-access.log"
+                     filePattern="${path}/rest-access.log.%i">
+                <Policies>
+                    <SizeBasedTriggeringPolicy size="100 MB" />
+                </Policies>
+                <PatternLayout pattern="${accessLogPattern}"/>
+            </RollingFile>
+        </Appenders>
+        <Loggers>
+            <Root level="{{ .Values.infinispan.configMap.logConfig.level }}">
+                <AppenderRef ref="STDOUT" level="{{ .Values.infinispan.configMap.logConfig.level }}"/>
+                <!-- Uncomment just one of the two lines bellow to use alternatively JSON logging or plain-text logging to file-->
+                <AppenderRef ref="FILE"/>
+                <!--      <AppenderRef ref="JSON-FILE"/>-->
+            </Root>
+            <!-- You can set different levels for categories here -->
+            <!-- You can also assign different appenders for each category, but you don't have to -->
+            <Logger name="com.arjuna" level="{{ .Values.infinispan.configMap.logConfig.level }}"/>
+            <Logger name="org.jboss.threads" level="{{ .Values.infinispan.configMap.logConfig.level }}"/>
+            <!-- No need to warn about not being able to TLS/SSL handshake -->
+            <Logger name="io.netty.handler.ssl.ApplicationProtocolNegotiationHandler" level="{{ .Values.infinispan.configMap.logConfig.level }}"/>
+            <!-- Set to INFO to enable audit logging -->
+            <Logger name="org.infinispan.AUDIT" additivity="false" level="{{ .Values.infinispan.configMap.logConfig.level }}">
+                <AppenderRef ref="AUDIT-FILE"/>
+            </Logger>
+            <!-- Set to TRACE to enable access logging for Hot Rod requests -->
+            <Logger name="org.infinispan.HOTROD_ACCESS_LOG" additivity="false" level="{{ .Values.infinispan.configMap.logConfig.level }}">
+                <AppenderRef ref="HR-ACCESS-FILE"/>
+            </Logger>
+            <!-- Set to TRACE to enable access logging for REST requests -->
+            <Logger name="org.infinispan.REST_ACCESS_LOG" additivity="false" level="{{ .Values.infinispan.configMap.logConfig.level }}">
+                <AppenderRef ref="REST-ACCESS-FILE"/>
+            </Logger>
+        </Loggers>
+    </Configuration>

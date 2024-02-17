@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      securityContext:
+        fsGroup: 1001
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.deployment.image }}
+          ports:
+          - name: postgres
+            containerPort: {{ .Values.postgres.deployment.port }}
+          env:
+          {{- toYaml .Values.postgres.deployment.env |  nindent 10 }}
+          volumeMounts:
+            - mountPath: "/var/lib/postgresql/data"
+              name: postgres
+      volumes:
+        - name: postgres
+          persistentVolumeClaim:
+            claimName: postgres

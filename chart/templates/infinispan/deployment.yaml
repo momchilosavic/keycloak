@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infinispan
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: infinispan
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: infinispan
+  template:
+    metadata:
+      labels:
+        app: infinispan
+    spec:
+      securityContext:
+        fsGroup: 0
+      containers:
+        - name: infinispan
+          image: {{ .Values.infinispan.deployment.image }}
+          args: 
+            - --server-config=/infinispan/infinispan-cache.xml
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/sh", "-c", ". /scripts/create-user.sh"]
+          ports:
+          - name: infinispan
+            containerPort: {{ .Values.infinispan.deployment.port }}
+          readinessProbe:
+            httpGet:
+              path: /rest/v2/cache-managers/remoteKeycloak/health/status
+              port: {{ .Values.infinispan.deployment.port }}
+            failureThreshold: 5
+            periodSeconds: 30
+          livenessProbe:
+            httpGet:
+              path: /rest/v2/cache-managers/remoteKeycloak/health/status
+              port: {{ .Values.infinispan.deployment.port }}
+            failureThreshold: 10
+            periodSeconds: 30
+          env:
+          {{- toYaml .Values.infinispan.deployment.env |  nindent 10 }}
+          volumeMounts:
+            - mountPath: /infinispan/infinispan-cache.xml
+              subPath: infinispan-cache.xml
+              name: infinispan-cache
+              readOnly: true
+            - mountPath: /opt/infinispan/server/conf/log4j2.xml
+              subPath: log4j2.xml
+              name: infinispan-logs
+              readOnly: true
+            - mountPath: "/opt/infinispan/server/data"
+              name: infinispan
+            - mountPath: "/scripts"
+              name: create-user
+      volumes:
+        - name: infinispan-cache
+          configMap:
+            name: infinispan-cache
+            items:
+              - key: infinispan-cache.xml
+                path: infinispan-cache.xml
+        - name: infinispan-logs
+          configMap:
+            name: infinispan-logs
+            items:
+              - key: log4j2.xml
+                path: log4j2.xml
+        - name: create-user
+          configMap:
+            name: create-user
+        - name: infinispan
+          persistentVolumeClaim:
+            claimName: infinispan
