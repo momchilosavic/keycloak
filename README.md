@@ -61,6 +61,7 @@ Jar file is provided to Keycloak container using persistent storage and Init con
 Kubernetes cluster used for deployment has nginx ingress controller running, so I only created new ingress object that maps “/” route to the Keycloak service. DNS name of AWS NLB that is mapped with ingress nginx controller Load Balancer service is used to access Keycloak portal.<br />
 I won’t provide ingress controller manifest as it is cloud provider dependent.<br />
 As alternative, service with NodePort could be used. <br />
+To switch between Ingress for ingress controller and NodePort you can set ingress.useIngressController to false. </br >
 #### Test
 
 
