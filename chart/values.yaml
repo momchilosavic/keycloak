@@ -1,3 +1,6 @@
+ingress:
+  useIngressController: true
+
 postgres:
   storage:
     hostPath: "/tmp/postgres"
