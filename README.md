@@ -34,7 +34,7 @@ Connect to the infinispan pod and list keys in sessions cache before and after l
 #### Documentation
 [Using the Infinispan Command Line Interface](https://infinispan.org/docs/stable/titles/cli/cli.html#creating-users_getting-started)
 #### Explanation
-In the PostStart lifecycle hook of the Infinispan container execute command to create keycloak user in application group when Infinispan is ready. Shell script for this is defined in ConfigMap create-user. <br />
+In the PostStart lifecycle hook of the Infinispan container, execute command to create user "keycloak" in group "application" when Infinispan is ready. Shell script for this is defined in ConfigMap create-user. <br />
 In the cache configuration for Keycloak set keycloak user for distributed cache authentication.
 #### Test
 Connect to Infinispan container and check if user is created:<br />
@@ -43,7 +43,7 @@ Connect to Infinispan container and check if user is created:<br />
 #### Documentation
 [Guide to Infinispan Server](https://infinispan.org/docs/stable/titles/server/server.html#configuring-server-logging)
 #### Explanation
-Based on log4j2.xml file, log level is updated to DEBUG and file is provided to container using ConfigMap infinispan-logs.
+Based on log4j2.xml file, log level is updated to DEBUG. File is provided to container using ConfigMap "infinispan-logs".
 #### Test
 List logs from Infinispan container<br />
 ![image](https://github.com/momchilosavic/keycloak/assets/48445874/b1559326-0977-4d97-a2c3-d710706df6d5)
@@ -57,7 +57,7 @@ Jar file is provided to Keycloak container using persistent storage and Init con
 ![image](https://github.com/momchilosavic/keycloak/assets/48445874/cc937fdd-ac4a-44be-9c44-0ec479e46558)
 ### Expose Keycloak for access outside of your cluster
 #### Explanation
-Kubernetes cluster used for deployment have nginx ingress controller running, so I only created new ingress object that maps “/” route to the Keycloak service. DNS name of AWS NLB that is mapped with ingress nginx controller Load Balancer service is used to access Keycloak portal.<br />
+Kubernetes cluster used for deployment has nginx ingress controller running, so I only created new ingress object that maps “/” route to the Keycloak service. DNS name of AWS NLB that is mapped with ingress nginx controller Load Balancer service is used to access Keycloak portal.<br />
 I won’t provide ingress controller manifest as it is cloud provider dependent.<br />
 As alternative, service with NodePort could be used. <br />
 #### Test
