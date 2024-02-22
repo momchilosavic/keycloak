@@ -8,6 +8,11 @@ Command: helm upgrade --install ./chart keycloak --namespace <namespace> --creat
 All values are predefined in values.yaml but they can be overwriten with appropriate values when running helm upgrade <br />
 For sake of simplicity, credentials and sensitive data are defined in values.yaml </br >
 Also, for sake of simplicty, hostPath is used for persistent storage. </br >
+#### ${\color{red}IMPORTANT}$
+To make this work with hostPath you have to allow root group to write to the directory on host node </br >
+`chmod 775 /tmp/postgres` <br />
+`chmod 775 /tmp/infinispan` <br />
+`chmod 775 /tmp/keycloak` <br />
 ## Solutions
 ### Deploy Keycloak and a separate Infinispan to a local Kubernetes cluster 
 #### Documentation
