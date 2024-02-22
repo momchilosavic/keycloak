@@ -6,10 +6,17 @@ Cluster: EKS - Kubernetes v1.26 <br />
 Tools needed: helm <br />
 #### Command
 `helm upgrade --install ./chart keycloak --namespace <namespace> --create-namespace --debug --set <key in chart/values.yaml>=<value>` <br />
+##### Simple run without PVC with local kubernetes (minikube):
+```
+helm upgrade --install tests ./chart --set ingress.useIngressController=false --set postgres.storage=null --set infinispan.storage=null --set keycloak.storage=null --debug --namespace keycloak --create-namespace --set keycloak.deployment.args.hostname=localhost
+minikube service keycloak-ingress -n keycloak2 --url
+```
+
 <br />
 All values are predefined in values.yaml but they can be overwriten with appropriate values when running helm upgrade <br />
 For sake of simplicity, credentials and sensitive data are defined in values.yaml </br >
 Also, for sake of simplicty, hostPath is used for persistent storage. </br >
+
 #### ${\color{red}IMPORTANT}$
 To make this work with hostPath you have to allow root group to write to the directory on host node </br >
 `chmod 775 /tmp/postgres` <br />

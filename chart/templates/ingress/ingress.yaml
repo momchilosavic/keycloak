@@ -5,7 +5,7 @@ metadata:
   name: keycloak
   namespace: {{ .Release.Namespace }}
 spec:
-  ingressClassName: alb-ingress-controller
+  ingressClassName: {{ .Values.ingress.ingressClassName }}
   rules:
     - http:
         paths:

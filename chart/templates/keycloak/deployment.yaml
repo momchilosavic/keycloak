@@ -95,5 +95,9 @@ spec:
           configMap:
             name: test-infinispan-connection
         - name: keycloak
+          {{- if .Values.keycloak.storage }}
           persistentVolumeClaim:
             claimName: keycloak
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

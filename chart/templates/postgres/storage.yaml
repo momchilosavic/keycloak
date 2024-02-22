@@ -1,3 +1,4 @@
+{{- if .Values.postgres.storage }}
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -26,3 +27,4 @@ spec:
   resources:
     requests:
       storage: {{ .Values.postgres.storage.capacity }}
+{{- end }}

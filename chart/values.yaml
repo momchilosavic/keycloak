@@ -1,5 +1,6 @@
 ingress:
   useIngressController: true
+  ingressClassName: alb-ingress-controller
 
 postgres:
   storage:
@@ -56,10 +57,10 @@ keycloak:
       database: postgres
       databaseUsername: postgres
       databasePassword: postgres
-      databaseHost: postgres.tests.svc.cluster.local
+      databaseHost: postgres
       databasePort: 5432
       databaseEngine: postgres
-      hostname: a388895f6c92c48829d5174b2e67789e-f21a17167740f882.elb.eu-west-1.amazonaws.com
+      hostname: localhost
   storage:
     hostPath: "/tmp/keycloak"
     capacity: 1Gi

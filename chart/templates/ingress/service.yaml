@@ -4,10 +4,12 @@ kind: Service
 metadata:
   name: keycloak-ingress
   namespace: {{ .Release.namespace }}
+  labels:
+    apps: keycloak
 spec:
   type: NodePort
   selector:
-    app.kubernetes.io/name: keycloak
+    app: keycloak
   ports:
     - port: {{ .Values.keycloak.deployment.port }}
       targetPort: {{ .Values.keycloak.deployment.port }}

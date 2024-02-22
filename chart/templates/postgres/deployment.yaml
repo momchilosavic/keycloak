@@ -25,10 +25,14 @@ spec:
             containerPort: {{ .Values.postgres.deployment.port }}
           env:
           {{- toYaml .Values.postgres.deployment.env |  nindent 10 }}
+          {{- if .Values.postgres.storage }}
           volumeMounts:
             - mountPath: "/var/lib/postgresql/data"
               name: postgres
+          {{- end }}
+      {{- if .Values.postgres.storage }}
       volumes:
         - name: postgres
           persistentVolumeClaim:
             claimName: postgres
+      {{- end }}
