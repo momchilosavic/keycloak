@@ -52,8 +52,10 @@ spec:
               subPath: log4j2.xml
               name: infinispan-logs
               readOnly: true
+            {{- if .Values.infinispan.storage }}
             - mountPath: "/opt/infinispan/server/data"
               name: infinispan
+            {{- end }}
             - mountPath: "/scripts"
               name: create-user
       volumes:
@@ -72,6 +74,8 @@ spec:
         - name: create-user
           configMap:
             name: create-user
+        {{- if .Values.infinispan.storage }}
         - name: infinispan
           persistentVolumeClaim:
             claimName: infinispan
+        {{- end }}
