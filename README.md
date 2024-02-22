@@ -6,8 +6,9 @@ Cluster: EKS - Kubernetes v1.26 <br />
 Tools needed: helm <br />
 #### Command
 `helm upgrade --install ./chart keycloak --namespace <namespace> --create-namespace --debug --set <key in chart/values.yaml>=<value>` <br />
-##### Simple run without PVC with local kubernetes:
-`helm upgrade --install tests ./ --set ingress.useIngressController=false --set postgres.storage=null --set infinispan.storage=null --set keycloak.storage=null --debug --namespace keycloak --create-namespace --set keycloak.deployment.args.hostname=localhost` </ br>
+##### Simple run without PVC with local kubernetes (minikube):
+`helm upgrade --install tests ./chart --set ingress.useIngressController=false --set postgres.storage=null --set infinispan.storage=null --set keycloak.storage=null --debug --namespace keycloak --create-namespace --set keycloak.deployment.args.hostname=localhost` </ br>
+`minikube service keycloak-ingress -n keycloak2 --url`
 
 <br />
 All values are predefined in values.yaml but they can be overwriten with appropriate values when running helm upgrade <br />
