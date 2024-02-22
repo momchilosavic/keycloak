@@ -4,7 +4,9 @@
 ### How to deploy?
 Cluster: EKS - Kubernetes v1.26 <br />
 Tools needed: helm <br />
-Command: helm upgrade --install ./chart keycloak --namespace <namespace> --create-namespace --debug --set <key in chart/values.yaml>=<value> <br />
+#### Command
+`helm upgrade --install ./chart keycloak --namespace <namespace> --create-namespace --debug --set <key in chart/values.yaml>=<value>` <br />
+<br />
 All values are predefined in values.yaml but they can be overwriten with appropriate values when running helm upgrade <br />
 For sake of simplicity, credentials and sensitive data are defined in values.yaml </br >
 Also, for sake of simplicty, hostPath is used for persistent storage. </br >
