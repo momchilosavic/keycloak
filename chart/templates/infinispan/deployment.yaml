@@ -16,7 +16,16 @@ spec:
         app: infinispan
     spec:
       securityContext:
-        fsGroup: 0
+        fsGroup: 1001
+      {{- if .Values.infinispan.storage }}
+      initContainers:
+      - name: setup-host-path
+        image: alpine
+        command: ['/bin/sh', '-c', "chown root:1001 /infinispan && chmod 775 /infinispan -R"]
+        volumeMounts:
+        - name: infinispan
+          mountPath: "/infinispan"
+      {{- end }}
       containers:
         - name: infinispan
           image: {{ .Values.infinispan.deployment.image }}
