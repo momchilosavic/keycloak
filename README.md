@@ -8,8 +8,8 @@ Tools needed: helm <br />
 `helm upgrade --install ./chart keycloak --namespace <namespace> --create-namespace --debug --set <key in chart/values.yaml>=<value>` <br />
 ##### Simple run without PVC with local kubernetes (minikube):
 ```
-helm upgrade --install tests ./chart --set ingress.useIngressController=false --set postgres.storage=null --set infinispan.storage=null --set keycloak.storage=null --debug --namespace keycloak --create-namespace --set keycloak.deployment.args.hostname=localhost
-minikube service keycloak-ingress -n keycloak2 --url
+helm upgrade --install tests ./chart --set ingress.useIngressController=false --set postgres.storage=null --set infinispan.storage=null --set keycloak.storage=null --debug --namespace keycloak --create-namespace --set keycloak.deployment.args.hostname=null
+minikube service keycloak-ingress -n keycloak --url
 ```
 
 <br />
@@ -19,9 +19,7 @@ Also, for sake of simplicty, hostPath is used for persistent storage. </br >
 
 #### ${\color{red}IMPORTANT}$
 To make this work with hostPath you have to allow root group to write to the directory on host node </br >
-`chmod 775 /tmp/postgres` <br />
-`chmod 775 /tmp/infinispan` <br />
-`chmod 775 /tmp/keycloak` <br />
+This is done in initContainer if storage is passed to helm </br >
 ## Solutions
 ### Deploy Keycloak and a separate Infinispan to a local Kubernetes cluster 
 #### Documentation
