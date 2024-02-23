@@ -18,7 +18,7 @@ For sake of simplicity, credentials and sensitive data are defined in values.yam
 Also, for sake of simplicty, hostPath is used for persistent storage. </br >
 
 #### ${\color{red}IMPORTANT}$
-To make this work with hostPath you have to allow root group to write to the directory on host node </br >
+To make this work with hostPath you have to allow 1001 group to write to the directory on host node </br >
 This is done in initContainer if storage is passed to helm </br >
 ## Solutions
 ### Deploy Keycloak and a separate Infinispan to a local Kubernetes cluster 
