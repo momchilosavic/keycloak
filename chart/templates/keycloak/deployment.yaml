@@ -18,6 +18,14 @@ spec:
       securityContext:
         fsGroup: 1001
       initContainers:
+      {{- if .Values.keycloak.storage }}
+      - name: setup-host-path
+        image: alpine
+        command: ['/bin/sh', '-c', "chown root:1001 /keycloak && chmod 775 /keycloak -R"]
+        volumeMounts:
+        - name: keycloak
+          mountPath: "/keycloak"
+      {{- end }}
       - name: test-postgres-connection
         image: {{ .Values.keycloak.deployment.initContainer.image.postgres }}
         command: ['/bin/bash', '-c', ". /scripts/test-connection.sh"]
@@ -52,9 +60,11 @@ spec:
             - --db-url-database={{ .Values.keycloak.deployment.args.database }}
             - --cache=ispn
             - --cache-config-file=infinispan-cache.xml
+            {{- if .Values.keycloak.deployment.args.hostname }}
             - --hostname={{ .Values.keycloak.deployment.args.hostname }}
             - --hostname-strict=false
             - --proxy=edge
+            {{- end }}
             - --http-enabled=true
             - --health-enabled=true
           ports:

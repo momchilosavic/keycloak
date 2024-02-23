@@ -17,6 +17,15 @@ spec:
     spec:
       securityContext:
         fsGroup: 1001
+      {{- if .Values.postgres.storage }}
+      initContainers:
+      - name: setup-host-path
+        image: alpine
+        command: ['/bin/sh', '-c', "chown root:1001 /postgres && chmod 775 /postgres -R"]
+        volumeMounts:
+        - name: postgres
+          mountPath: "/postgres"
+      {{- end }}
       containers:
         - name: postgres
           image: {{ .Values.postgres.deployment.image }}
